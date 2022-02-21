@@ -1,3 +1,5 @@
+use std::fs;
+
 fn main() {
     // ======SET ONE======
 
@@ -19,50 +21,58 @@ fn main() {
     );
 
     // CHALLENGE THREE
-    set_one_challenge_three();
+    // set_one_challenge_three();
+
+    // CHALLENGE FOUR
+    set_one_challenge_four();
 }
 
 // input has been XOR'd with one character (assumption: ASCII character)
 // figure out which one it is, and crack the plaintext
 fn set_one_challenge_three() {
     const INPUT: &str = "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736";
-    let input_len: usize = hex::decode(INPUT).unwrap().len();
 
-    #[derive(Debug)]
-    struct Candidate {
-        plaintext: String,
-        key: char,
-        score: f32,
-    }
-    let mut output = Vec::new();
-
-    // step one: XOR input with every ASCII character
-    // and calculate its "englishness" score
-    for c in 0..=127 as u8 {
-        // repeat test key character `input_len` times
-        let test_key = &std::iter::repeat(c as char)
-            .take(input_len)
-            .collect::<String>();
-
-        // get options
-        let val = hex::decode(matasano::set_one::fixed_xor(INPUT, &hex::encode(test_key))).unwrap();
-        let decoded = String::from_utf8(val).unwrap();
-        let englishness = matasano::set_one::englishness(&decoded);
-
-        let c = Candidate {
-            plaintext: decoded,
-            key: c as char,
-            score: englishness,
-        };
-        output.push(c);
-    }
-
-    // sort solutions by englishness
-    output.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap());
+    let output = matasano::set_one::xor_all_ascii(INPUT);
 
     // print best solution
     println!(
         "Your best solution is: '{}', with key '{}' and Englishness score of {}.",
         output[0].plaintext, output[0].key, output[0].score
+    );
+}
+
+// find which string in the file has been encrypted with single-character XOR
+fn set_one_challenge_four() {
+    let contents = fs::read_to_string("files/4.txt").expect("Something went wrong.");
+    let lines = contents.lines(); // line-by-line iterator
+
+    // try XOR decryption for each line
+    let mut solutions = Vec::new();
+    struct Solution {
+        candidates: Vec<matasano::set_one::Candidate>,
+        index: usize,
+    }
+
+    for (i, line) in lines.enumerate() {
+        let solution = Solution {
+            candidates: matasano::set_one::xor_all_ascii(line),
+            index: i,
+        };
+
+        solutions.push(solution);
+    }
+
+    solutions.sort_by(|a, b| {
+        b.candidates[0]
+            .score
+            .partial_cmp(&a.candidates[0].score)
+            .unwrap()
+    });
+    println!(
+        "The highest-scoring string was line {}.\nDecrypted, the string was \n{}\nwith key '{}' and Englishness score of {}.",
+        solutions[0].index,
+        solutions[0].candidates[0].plaintext,
+        solutions[0].candidates[0].key,
+        solutions[0].candidates[0].score,
     );
 }

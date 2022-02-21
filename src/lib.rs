@@ -68,4 +68,43 @@ pub mod set_one {
             .fold(0.0, |acc, (i, x)| acc + (x * LETTER_FREQUENCIES[i]).sqrt());
         return coefficient;
     }
+
+    #[derive(Debug)]
+    pub struct Candidate {
+        pub plaintext: String,
+        pub key: char,
+        pub score: f32,
+    }
+
+    // For a given hex-encoded string, XORs it with all ASCII characters,
+    // calculates the 'englishness' score, and returns a sorted vec.
+    pub fn xor_all_ascii(test: &str) -> Vec<Candidate> {
+        let input_len: usize = hex::decode(test).unwrap().len();
+        let mut output = Vec::new();
+        // step one: XOR input with every ASCII character
+        // and calculate its "englishness" score
+        for c in 0..=127 as u8 {
+            // repeat test key character `input_len` times
+            let test_key = &std::iter::repeat(c as char)
+                .take(input_len)
+                .collect::<String>();
+
+            // get options
+            let val = hex::decode(fixed_xor(test, &hex::encode(test_key))).unwrap();
+            let decoded = String::from_utf8_lossy(&val).to_string();
+            let englishness = englishness(&decoded);
+
+            let c = Candidate {
+                plaintext: decoded,
+                key: c as char,
+                score: englishness,
+            };
+            output.push(c);
+        }
+
+        // sort solutions by englishness
+        output.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap());
+
+        return output;
+    }
 }
