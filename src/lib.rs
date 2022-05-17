@@ -107,4 +107,8 @@ pub mod set_one {
 
         return output;
     }
+
+    pub fn repeating_key_xor(plaintext: &str, key: &str) -> String {
+        return "Result".to_string();
+    }
 }
